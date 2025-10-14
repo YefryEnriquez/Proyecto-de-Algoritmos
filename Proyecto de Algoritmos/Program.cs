@@ -2,27 +2,12 @@
 using System.Globalization;
 using System.IO;
 
-CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("es-GT");
-Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-var dataDir = Path.Combine(AppContext.BaseDirectory, "Data");
-
-var usersRepo = new UsersRepository(dataDir);
-var accountsRepo = new AccountsRepository(dataDir);
-var txRepo = new TransactionsRepository(dataDir);
-
-var auth = new AuthService(usersRepo);
-var accountSvc = new AccountService(accountsRepo, txRepo);
-
-// Seed si no hay datos
-SeedIfEmpty();
 
 while (true)
 {
     Console.Clear();
-    Console.WriteLine("========================================");
-    Console.WriteLine("     SIMULADOR DE CAJERO AUTOMÁTICO     ");
-    Console.WriteLine("========================================");
+    Console.WriteLine("     SIMULADOR DE CAJERO AUTOMÁTICO  \n   ");
     Console.WriteLine("1) Iniciar sesión");
     Console.WriteLine("2) Crear nueva cuenta");
     Console.WriteLine("3) Salir");
