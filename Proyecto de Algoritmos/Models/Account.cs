@@ -1,7 +1,8 @@
-namespace AtmSim.Models;
-
-public class Account
+namespace SimuladorCajero.Models
 {
-    public string AccountNumber { get; set; } = "";
-    public decimal Balance { get; set; } = 0m;
+    public class Account
+    {
+        public string AccountNumber { get; set; } = "";
+        public string PinHash { get; set; } = ""; // Aca se aplica el hash del PIN
+    }
 }

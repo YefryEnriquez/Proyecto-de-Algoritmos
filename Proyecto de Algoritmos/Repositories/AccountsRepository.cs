@@ -1,41 +1,51 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
-using AtmSim.Models;
+using SimuladorCajero.Models;
 
-namespace AtmSim.Repositories;
-
-public class AccountsRepository
+namespace SimuladorCajero.Repositories
 {
-    private readonly string _filePath;
-    public AccountsRepository(string dataDir)
+    public class AccountsRepository
     {
-        Directory.CreateDirectory(dataDir);
-        _filePath = Path.Combine(dataDir, "accounts.json");
-        if (!File.Exists(_filePath))
-            File.WriteAllText(_filePath, "[]");
-    }
+        private readonly string _filePath;
 
-    public List<Account> GetAll()
-    {
-        var json = File.ReadAllText(_filePath);
-        return JsonSerializer.Deserialize<List<Account>>(json) ?? new();
-    }
+        public AccountsRepository(string dataDir)
+        {
+            Directory.CreateDirectory(dataDir);
+            _filePath = Path.Combine(dataDir, "accounts.json");
+            if (!File.Exists(_filePath))
+            {
+                File.WriteAllText(_filePath, "[]");
+            }
+        }
 
-    public Account? FindByAccount(string accountNumber)
-    {
-        return GetAll().FirstOrDefault(a => a.AccountNumber == accountNumber);
-    }
+        public List<Account> GetAll()
+        {
+            var json = File.ReadAllText(_filePath);
+            var accounts = JsonSerializer.Deserialize<List<Account>>(json);
+            return accounts != null ? accounts : new List<Account>();
+        }
 
-    public void Upsert(Account account)
-    {
-        var all = GetAll();
-        var existing = all.FindIndex(a => a.AccountNumber == account.AccountNumber);
-        if (existing >= 0) all[existing] = account; else all.Add(account);
-        Save(all);
-    }
+        public Account FindByAccount(string accountNumber)
+        {
+            return GetAll().FirstOrDefault(a => a.AccountNumber == accountNumber);
+        }
 
-    private void Save(List<Account> accounts)
-    {
-        var json = JsonSerializer.Serialize(accounts, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(_filePath, json);
+        public void Upsert(Account account)
+        {
+            var all = GetAll();
+            var existing = all.FindIndex(a => a.AccountNumber == account.AccountNumber);
+            if (existing >= 0)
+            {
+                all[existing] = account;
+            }
+            else
+            {
+                all.Add(account);
+            }
+            var json = JsonSerializer.Serialize(all, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_filePath, json);
+        }
     }
 }

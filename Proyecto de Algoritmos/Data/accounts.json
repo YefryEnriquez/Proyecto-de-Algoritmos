@@ -1,1 +1,6 @@
-[]
+[
+    {
+        "AccountNumber": "1000000001",
+        "PinHash": "SHA256_HASH_DEL_PIN"
+    }
+]
