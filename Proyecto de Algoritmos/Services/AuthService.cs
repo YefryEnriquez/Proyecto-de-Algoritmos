@@ -1,42 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SimuladorCajero.Repositories;
+using System;
+using SimuladorCajero.Persistence;
+using SimuladorCajero.Utils;
 using SimuladorCajero.Models;
-
 
 namespace SimuladorCajero.Services
 {
-    public class AuthService
+
+}
+
+public class AuthService
+{
+    public bool ValidateCredentials(string accountNumber, string pin)
     {
-        private readonly AccountsRepository _accountsRepo;
+        var acc = JsonDb.GetAccount(accountNumber);
+        if (acc == null) return false;
+        var hash = Hasher.Sha256(pin);
+        return string.Equals(hash, acc.PinHash, StringComparison.OrdinalIgnoreCase);
+    }
 
-        public AuthService(AccountsRepository accountsRepo)
+    public void Register(string accountNumber, string pin)
+    {
+        var existing = JsonDb.GetAccount(accountNumber);
+        if (existing != null) throw new InvalidOperationException("El número de cuenta ya existe.");
+
+        var acc = new Account
         {
-            _accountsRepo = accountsRepo;
-        }
-
-        public bool ValidateCredentials(string accountNumber, string pin)
-        {
-            var account = _accountsRepo.FindByAccount(accountNumber);
-            if (account == null)
-                return false;
-
-            // Compara el PIN (en un caso real, usaría un hash SHA-256)
-            return pin == "1234"; // Solo para demo
-        }
-
-        public void Register(string accountNumber, string pin)
-        {
-            var account = new Account
-            {
-                AccountNumber = accountNumber,
-
-                PinHash = pin // Aquí usaríamos un hash en un caso real
-            };
-            _accountsRepo.Upsert(account);
-        }
+            AccountNumber = accountNumber,
+            PinHash = Hasher.Sha256(pin),
+            Balance = 0m
+        };
+        JsonDb.UpsertAccount(acc);
     }
 }
