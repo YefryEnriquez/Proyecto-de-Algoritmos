@@ -76,21 +76,24 @@
   <ItemGroup>
     <Compile Include="Models\Account.cs" />
     <Compile Include="Models\TransactionRecord.cs" />
-    <Compile Include="Persistence\JsonDb.cs" />
+    <Compile Include="Models\User.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\AccountsRepository.cs" />
+    <Compile Include="Repositories\TransactionsRepository.cs" />
+    <Compile Include="Repositories\UsersRepository.cs" />
     <Compile Include="Services\AccountService.cs" />
     <Compile Include="Services\AuthService.cs" />
+    <Compile Include="Services\TransactionService.cs" />
     <Compile Include="Utils\ConsoleHelper.cs" />
     <Compile Include="Utils\Hasher.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <None Include="Data\accounts.json" />
     <None Include="Data\transactions.json" />
-    <None Include="packages.config" />
+    <None Include="Data\users.json" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

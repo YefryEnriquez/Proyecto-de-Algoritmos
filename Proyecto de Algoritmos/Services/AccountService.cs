@@ -1,102 +1,122 @@
-using System; // Agrega esta directiva using para que InvalidOperationException esté disponible
-using SimuladorCajero.Persistence;
-using SimuladorCajero.Models;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using CajeroAutomatico.Models;
+using CajeroAutomatico.Repositories;
 
-namespace SimuladorCajero.Services
+namespace CajeroAutomatico.Services
 {
-
-}
-
-public class AccountService
-{
-    public decimal GetBalance(string accountNumber)
+    public class AccountService
     {
-        var acc = JsonDb.GetAccount(accountNumber) ?? throw new InvalidOperationException("Cuenta no encontrada.");
-        return acc.Balance;
-    }
+        private readonly AccountsRepository _accountsRepo;
+        private readonly TransactionsRepository _txRepo;
 
-    public void Deposit(string accountNumber, decimal amount)
-    {
-        if (amount <= 0) throw new ArgumentException("El monto debe ser mayor a cero.");
-        var acc = JsonDb.GetAccount(accountNumber) ?? throw new InvalidOperationException("Cuenta no encontrada.");
-        acc.Balance += amount;
-        JsonDb.UpsertAccount(acc);
-
-        JsonDb.AddTransaction(new TransactionRecord
+        public AccountService(AccountsRepository accountsRepo, TransactionsRepository txRepo)
         {
-            AccountNumber = accountNumber,
-            Amount = amount,
-            BalanceAfter = acc.Balance,
-            Type = "DEPÓSITO",
-            Timestamp = DateTime.Now,
-            Details = "Depósito en efectivo"
-        });
-    }
+            _accountsRepo = accountsRepo;
+            _txRepo = txRepo;
+        }
 
-    public void Withdraw(string accountNumber, decimal amount)
-    {
-        if (amount <= 0) throw new ArgumentException("El monto debe ser mayor a cero.");
-        var acc = JsonDb.GetAccount(accountNumber) ?? throw new InvalidOperationException("Cuenta no encontrada.");
-        if (acc.Balance < amount) throw new InvalidOperationException("Saldo insuficiente.");
-        acc.Balance -= amount;
-        JsonDb.UpsertAccount(acc);
-
-        JsonDb.AddTransaction(new TransactionRecord
+        public decimal GetBalance(string accountNumber)
         {
-            AccountNumber = accountNumber,
-            Amount = amount,
-            BalanceAfter = acc.Balance,
-            Type = "RETIRO",
-            Timestamp = DateTime.Now,
-            Details = "Retiro en efectivo"
-        });
-    }
+            var account = _accountsRepo.FindByAccount(accountNumber) ?? throw new InvalidOperationException("Cuenta no encontrada.");
+            return account.Balance;
+        }
 
-    public void Transfer(string fromAccount, string toAccount, decimal amount)
-    {
-        if (fromAccount == toAccount) throw new ArgumentException("La cuenta de destino no puede ser la misma.");
-        if (amount <= 0) throw new ArgumentException("El monto debe ser mayor a cero.");
-
-        var origen = JsonDb.GetAccount(fromAccount) ?? throw new InvalidOperationException("Cuenta origen no encontrada.");
-        var destino = JsonDb.GetAccount(toAccount);
-        if (destino == null) throw new InvalidOperationException("La cuenta destino no existe.");
-        if (origen.Balance < amount) throw new InvalidOperationException("Saldo insuficiente.");
-
-        origen.Balance -= amount;
-        destino.Balance += amount;
-        JsonDb.UpsertAccount(origen);
-        JsonDb.UpsertAccount(destino);
-
-        JsonDb.AddTransaction(new TransactionRecord
+        public void Deposit(string accountNumber, decimal amount)
         {
-            AccountNumber = fromAccount,
-            Amount = amount,
-            BalanceAfter = origen.Balance,
-            Type = "TRANSFERENCIA ENVÍO",
-            Timestamp = DateTime.Now,
-            Details = $"A {toAccount}"
-        });
-        JsonDb.AddTransaction(new TransactionRecord
-        {
-            AccountNumber = toAccount,
-            Amount = amount,
-            BalanceAfter = destino.Balance,
-            Type = "TRANSFERENCIA RECEPCIÓN",
-            Timestamp = DateTime.Now,
-            Details = $"Desde {fromAccount}"
-        });
-    }
+            if (amount <= 0) throw new ArgumentException("El monto debe ser mayor a cero.");
+            var account = _accountsRepo.FindByAccount(accountNumber) ?? throw new InvalidOperationException("Cuenta no encontrada.");
+            account.Balance += amount;
+            _accountsRepo.Upsert(account);
 
-    public static void CreateOpeningTransaction(string accountNumber, decimal initialDeposit, string details)
-    {
-        JsonDb.AddTransaction(new TransactionRecord
+            _txRepo.Add(new TransactionRecord
+            {
+                AccountNumber = accountNumber,
+                Amount = amount,
+                BalanceAfter = account.Balance,
+                Type = "DEPÓSITO",
+                Timestamp = DateTime.Now,
+                Details = "Depósito en efectivo."
+            });
+        }
+
+        public void Withdraw(string accountNumber, decimal amount)
         {
-            AccountNumber = accountNumber,
-            Amount = initialDeposit,
-            BalanceAfter = initialDeposit,
-            Type = "APERTURA",
-            Timestamp = DateTime.Now,
-            Details = details
-        });
+            if (amount <= 0) throw new ArgumentException("El monto debe ser mayor a cero.");
+            var account = _accountsRepo.FindByAccount(accountNumber) ?? throw new InvalidOperationException("Cuenta no encontrada.");
+            if (account.Balance < amount) throw new InvalidOperationException("Saldo insuficiente.");
+            account.Balance -= amount;
+            _accountsRepo.Upsert(account);
+
+            _txRepo.Add(new TransactionRecord
+            {
+                AccountNumber = accountNumber,
+                Amount = amount,
+                BalanceAfter = account.Balance,
+                Type = "RETIRO",
+                Timestamp = DateTime.Now,
+                Details = "Retiro en efectivo."
+            });
+        }
+
+        public void Transfer(string fromAccount, string toAccount, decimal amount)
+        {
+            if (fromAccount == toAccount) throw new ArgumentException("La cuenta de destino no puede ser la misma.");
+            if (amount <= 0) throw new ArgumentException("El monto debe ser mayor a cero.");
+
+            var origen = _accountsRepo.FindByAccount(fromAccount) ?? throw new InvalidOperationException("Cuenta origen no encontrada.");
+            var destino = _accountsRepo.FindByAccount(toAccount);
+            if (destino == null) throw new InvalidOperationException("La cuenta destino no existe.");
+            if (origen.Balance < amount) throw new InvalidOperationException("Saldo insuficiente.");
+
+            origen.Balance -= amount;
+            destino.Balance += amount;
+            _accountsRepo.Upsert(origen);
+            _accountsRepo.Upsert(destino);
+
+            _txRepo.Add(new TransactionRecord
+            {
+                AccountNumber = fromAccount,
+                Amount = amount,
+                BalanceAfter = origen.Balance,
+                Type = "TRANSFERENCIA ENVÍO",
+                Timestamp = DateTime.Now,
+                Details = $"Transferencia enviada a {toAccount}."
+            });
+
+            _txRepo.Add(new TransactionRecord
+            {
+                AccountNumber = toAccount,
+                Amount = amount,
+                BalanceAfter = destino.Balance,
+                Type = "TRANSFERENCIA RECEPCIÓN",
+                Timestamp = DateTime.Now,
+                Details = $"Transferencia recibida desde {fromAccount}."
+            });
+        }
+
+        public void CreateAccount(string accountNumber, string ownerName, decimal initialDeposit = 0m)
+        {
+            var existing = _accountsRepo.FindByAccount(accountNumber);
+            if (existing != null) throw new InvalidOperationException("El número de cuenta ya existe.");
+            var account = new Account { AccountNumber = accountNumber, Balance = initialDeposit };
+            _accountsRepo.Upsert(account);
+
+            _txRepo.Add(new TransactionRecord
+            {
+                AccountNumber = accountNumber,
+                Amount = initialDeposit,
+                BalanceAfter = initialDeposit,
+                Type = "APERTURA",
+                Timestamp = DateTime.Now,
+                Details = $"Cuenta creada para {ownerName}."
+            });
+        }
+
+        public List<TransactionRecord> GetHistory(string accountNumber)
+        {
+            return _txRepo.GetByAccount(accountNumber);
+        }
     }
 }
